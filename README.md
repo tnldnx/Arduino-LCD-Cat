@@ -1,5 +1,5 @@
+# 창의설계입문 미션 - 동작중임을 나타내는 캐릭터 모션 만들기
 # Arduino-LCD-Cat
-# Arduino LCD 고양이 애니메이션
 
 ## 1. 프로젝트 소개
 
@@ -57,6 +57,109 @@ Arduino UNO와 I2C LCD를 점퍼선 4개로 직접 연결하였다.
 `lcd.setCursor()` 함수를 이용하여 LCD 첫 번째 줄의 첫 번째 위치를 지정하였다.
 
 `lcd.write()` 함수로 사용자 정의 문자를 출력한 후, `lcd.createChar()`를 이용하여 문자 패턴을 갱신하는 방식으로 고양이가 같은 위치에서 계속 걷도록 구현하였다.
+
+### 4.5 코드 동작 원리
+
+**① LCD 객체 생성 및 프레임 데이터 저장**
+
+```cpp
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+const byte FRAME_COUNT = 8;
+byte cat[8][2][8];
+```
+
+`LiquidCrystal_I2C` 라이브러리를 사용하여 I2C 주소가 `0x27`인 16×2 LCD를 제어한다.
+
+고양이 애니메이션은 총 8개의 프레임으로 구성되며, 각 프레임의 픽셀 데이터는 3차원 배열 `cat[8][2][8]`에 저장한다.
+
+- 첫 번째 차원 `[8]`: 애니메이션 프레임 8개
+- 두 번째 차원 `[2]`: 고양이를 구성하는 문자 2개
+- 세 번째 차원 `[8]`: 각 문자의 세로 방향 픽셀 데이터 8줄
+
+각 픽셀 데이터는 `B10000`과 같은 2진수 형태로 정의한다. 각 행의 하위 5비트가 LCD의 가로 5개 픽셀에 대응하며, 1은 켜진 픽셀, 0은 꺼진 픽셀을 의미한다.
+
+**② 사용자 정의 문자 갱신**
+
+```cpp
+void showCat(byte f) {
+  lcd.createChar(0, cat[f][0]);
+  lcd.createChar(1, cat[f][1]);
+}
+```
+
+`showCat()` 함수는 전달받은 프레임 번호에 해당하는 픽셀 데이터를 LCD에 적용한다.
+
+`lcd.createChar()`를 사용하여 사용자 정의 문자 0번과 1번의 픽셀 패턴을 변경한다.
+
+이를 통해 LCD에 이미 출력된 두 문자의 모양을 갱신하여 고양이의 움직임을 표현한다.
+
+**③ LCD 초기화 및 초기 화면 출력**
+
+```cpp
+void setup() {
+  lcd.init();
+  lcd.backlight();
+
+  showCat(0);
+
+  lcd.setCursor(0, 0);
+  lcd.write((byte)0);
+  lcd.write((byte)1);
+}
+```
+
+`setup()` 함수에서는 LCD를 초기화하고 백라이트를 켠다.
+
+이후 첫 번째 프레임의 문자 패턴을 등록하고, `lcd.setCursor(0, 0)`으로 첫 번째 줄의 첫 번째 칸을 지정한다.
+
+`lcd.write()`를 사용하여 사용자 정의 문자 0번과 1번을 나란히 출력해 고양이의 초기 모습을 표시한다.
+
+**④ millis()를 이용한 애니메이션 시간 제어**
+
+```cpp
+unsigned long previousMillis = 0;
+const unsigned long interval = 160;
+
+byte frame = 0;
+```
+
+`previousMillis`는 이전에 프레임을 변경한 시간을 저장하는 변수이며, `interval`은 프레임 전환 간격을 의미한다.
+
+본 프로젝트에서는 프레임 전환 간격을 160ms로 설정하였다.
+
+`frame` 변수는 현재 애니메이션 프레임 번호를 저장한다.
+
+**⑤ 프레임 전환 및 반복**
+
+```cpp
+void loop() {
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+
+    frame = (frame + 1) % FRAME_COUNT;
+    showCat(frame);
+  }
+}
+```
+
+`millis()`를 사용하여 Arduino 실행 이후 경과한 시간을 확인한다.
+
+이전 프레임 변경 시점으로부터 160ms 이상 경과하면 다음 프레임으로 전환한다.
+
+`frame = (frame + 1) % FRAME_COUNT` 연산을 통해 프레임 번호가 0부터 7까지 증가하고, 마지막 프레임 이후에는 다시 0으로 돌아간다.
+
+이 과정을 반복하여 고양이가 지속적으로 걷는 애니메이션을 구현한다.
+
+**⑥ 화면 갱신 방식**
+
+프로그램은 `setup()`에서 사용자 정의 문자 2개를 LCD에 한 번 출력한다.
+
+이후 `loop()`에서는 `lcd.clear()`나 `lcd.write()`를 반복해서 호출하지 않고, `showCat()`을 통해 사용자 정의 문자의 픽셀 패턴만 변경한다.
+
+따라서 화면 전체를 지우고 다시 출력하는 과정을 생략하면서 고양이의 애니메이션을 구현할 수 있다.
 
 ## 5. 실행 결과
 
