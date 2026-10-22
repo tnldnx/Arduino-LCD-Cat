@@ -1,5 +1,5 @@
 # Arduino-LCD-Cat
-# 🐈 Arduino LCD 고양이 애니메이션
+# Arduino LCD 고양이 애니메이션
 
 ## 1. 프로젝트 소개
 
